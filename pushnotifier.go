@@ -1,26 +1,44 @@
 package pushnotifier
 
 import (
+	"bytes"
+	"crypto/tls"
+	"encoding/json"
+	"io"
 	"net/http"
+	"net/url"
 )
 
-type client struct {
-	BaseURL   string
+var apiVersion = "v2"
+var baseURL = "https://api.pushnotifier.de/" + apiVersion
+var userAgent = "go-pushnotifier 0.1.0"
+
+type Client struct {
+	BaseURL   *url.URL
 	UserAgent string
 
 	httpClient *http.Client
 }
 
-func NewClient(baseUrl string) Client {
-	client := client{}
+type Device struct {
+	Id    string `json:"id"`
+	Title string `json:"title"`
+	Model string `json:"model"`
+	Image string `json:"image"`
+}
 
-	if baseUrl == nil {
-		client.BaseURL = "https://api.pushnotifier.de/v2"
-	} else {
-		client.BaseURL = baseUrl
-	}
-	client.UserAgent = "go-pushnotifier 0.1.0"
-	return client
+func NewClient() *Client {
+	tr := &http.Transport{TLSClientConfig: &tls.Config{}}
+	client := &http.Client{Transport: tr}
+	httpURL, _ := url.Parse(baseURL)
+	return &Client{httpURL, userAgent, client}
+}
+
+func NewClientWithBaseURL(localBaseURL string) *Client {
+	tr := &http.Transport{TLSClientConfig: &tls.Config{}}
+	client := &http.Client{Transport: tr}
+	httpURL, _ := url.Parse(localBaseURL)
+	return &Client{httpURL, userAgent, client}
 }
 
 func (c *Client) ListDevices() ([]Device, error) {

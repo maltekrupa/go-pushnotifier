@@ -2,6 +2,8 @@ package pushnotifier
 
 import (
 	"errors"
+	"os"
+	"strconv"
 	"strings"
 
 	"gopkg.in/resty.v1"
@@ -40,8 +42,14 @@ type Device struct {
 }
 
 func NewClient() *Client {
+	debug, _ := strconv.ParseBool(os.Getenv("PUSHNOTIFIER_DEBUG"))
+	pkg := os.Getenv("PUSHNOTIFIER_PACKAGE")
+	token := os.Getenv("PUSHNOTIFIER_TOKEN")
+
 	r := resty.New()
 	r.SetError(AuthError{})
+	r.SetDebug(debug)
+	r.SetBasicAuth(pkg, token)
 	r.SetHeaders(map[string]string{
 		"User-Agent": userAgent,
 	})

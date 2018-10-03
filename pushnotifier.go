@@ -1,12 +1,10 @@
 package pushnotifier
 
 import (
-	"bytes"
-	"crypto/tls"
-	"encoding/json"
-	"io"
-	"net/http"
-	"net/url"
+	"errors"
+	"strings"
+
+	"gopkg.in/resty.v1"
 )
 
 var apiVersion = "v2"
@@ -14,10 +12,24 @@ var baseURL = "https://api.pushnotifier.de/" + apiVersion
 var userAgent = "go-pushnotifier 0.1.0"
 
 type Client struct {
-	BaseURL   *url.URL
+	Http      resty.Client
+	BaseURL   string
 	UserAgent string
+}
 
-	httpClient *http.Client
+type AuthError struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+type SendText struct {
+	Devices []string `json:"devices"`
+	Content string   `json:"content"`
+}
+
+type SendResponse struct {
+	Success []string `json:"success"`
+	Error   []string `json:"error"`
 }
 
 type Device struct {
@@ -28,58 +40,29 @@ type Device struct {
 }
 
 func NewClient() *Client {
-	tr := &http.Transport{TLSClientConfig: &tls.Config{}}
-	client := &http.Client{Transport: tr}
-	httpURL, _ := url.Parse(baseURL)
-	return &Client{httpURL, userAgent, client}
+	r := resty.New()
+	r.SetError(AuthError{})
+	r.SetHeaders(map[string]string{
+		"User-Agent": userAgent,
+	})
+
+	return &Client{*r, baseURL, userAgent}
 }
 
-func NewClientWithBaseURL(localBaseURL string) *Client {
-	tr := &http.Transport{TLSClientConfig: &tls.Config{}}
-	client := &http.Client{Transport: tr}
-	httpURL, _ := url.Parse(localBaseURL)
-	return &Client{httpURL, userAgent, client}
-}
+func (c Client) ListDevices() ([]Device, error) {
+	var url strings.Builder
+	url.WriteString(c.BaseURL)
+	url.WriteString("/devices")
 
-func (c *Client) ListDevices() ([]Device, error) {
-	req, err := c.newRequest("GET", "/devices", nil)
-	if err != nil {
-		return nil, err
-	}
-	var devices []Device
-	_, err = c.do(req, &devices)
-	return devices, err
-}
+	var d []Device
+	r, _ := c.Http.R().
+		SetResult(&d).
+		Get(url.String())
 
-func (c *Client) newRequest(method, path string, body interface{}) (*http.Request, error) {
-	rel := &url.URL{Path: path}
-	u := c.BaseURL.ResolveReference(rel)
-	var buf io.ReadWriter
-	if body != nil {
-		buf = new(bytes.Buffer)
-		err := json.NewEncoder(buf).Encode(body)
-		if err != nil {
-			return nil, err
-		}
+	if r.Error() != nil {
+		msg := r.Error().(*AuthError)
+		return nil, errors.New(msg.Message)
 	}
-	req, err := http.NewRequest(method, u.String(), buf)
-	if err != nil {
-		return nil, err
-	}
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", c.UserAgent)
-	return req, nil
-}
 
-func (c *Client) do(req *http.Request, v interface{}) (*http.Response, error) {
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	err = json.NewDecoder(resp.Body).Decode(v)
-	return resp, err
+	return d, nil
 }

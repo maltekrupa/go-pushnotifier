@@ -17,11 +17,25 @@ type Client struct {
 	Http      resty.Client
 	BaseURL   string
 	UserAgent string
+
+	AppToken string
 }
 
 type AuthError struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
+}
+
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	Username  string `json:"username"`
+	Avatar    string `json:"avatar"`
+	AppToken  string `json:"app_token"`
+	ExpiresAt string `json:"expires_at"`
 }
 
 type SendText struct {
@@ -45,6 +59,8 @@ func NewClient() *Client {
 	debug, _ := strconv.ParseBool(os.Getenv("PUSHNOTIFIER_DEBUG"))
 	pkg := os.Getenv("PUSHNOTIFIER_PACKAGE")
 	token := os.Getenv("PUSHNOTIFIER_TOKEN")
+	username := os.Getenv("PUSHNOTIFIER_USERNAME")
+	password := os.Getenv("PUSHNOTIFIER_PASSWORD")
 
 	r := resty.New()
 	r.SetError(AuthError{})
@@ -54,7 +70,29 @@ func NewClient() *Client {
 		"User-Agent": userAgent,
 	})
 
-	return &Client{*r, baseURL, userAgent}
+	c := &Client{*r, baseURL, userAgent, ""}
+	c.login(username, password)
+
+	return c
+}
+
+func (c *Client) login(username, password string) {
+	var url strings.Builder
+	url.WriteString(c.BaseURL)
+	url.WriteString("/user/login")
+
+	var l LoginResponse
+	r, _ := c.Http.R().
+		SetBody(LoginRequest{Username: username, Password: password}).
+		SetResult(&l).
+		Post(url.String())
+
+	if r.Error() != nil {
+		msg := r.Error().(*AuthError)
+		errors.New(msg.Message)
+	}
+
+	c.AppToken = l.AppToken
 }
 
 func (c Client) ListDevices() ([]Device, error) {
@@ -64,6 +102,7 @@ func (c Client) ListDevices() ([]Device, error) {
 
 	var d []Device
 	r, _ := c.Http.R().
+		SetHeader("X-AppToken", c.AppToken).
 		SetResult(&d).
 		Get(url.String())
 

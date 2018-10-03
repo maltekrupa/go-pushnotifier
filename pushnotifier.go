@@ -113,3 +113,25 @@ func (c Client) ListDevices() ([]Device, error) {
 
 	return d, nil
 }
+
+func (c Client) SendText(devices []string, message string) (SendResponse, error) {
+	var url strings.Builder
+	url.WriteString(c.BaseURL)
+	url.WriteString("/notifications/text")
+
+	var s SendResponse
+	r, _ := c.Http.R().
+		SetHeader("X-AppToken", c.AppToken).
+		SetBody(SendText{Devices: devices, Content: message}).
+		SetResult(&s).
+		Put(url.String())
+
+	if r.StatusCode() == 400 {
+		return s, errors.New("Malformed request")
+	}
+	if r.StatusCode() == 404 {
+		return s, errors.New("One of the devices couldn't be found")
+	}
+
+	return s, nil
+}

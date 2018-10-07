@@ -9,14 +9,17 @@ import (
 	"gopkg.in/resty.v1"
 )
 
-var apiVersion = "v2"
-var baseURL = "https://api.pushnotifier.de/" + apiVersion
+var apiVersion = "/v2"
+var domain = "api.pushnotifier.de"
+var baseURL = "https://" + domain + apiVersion
 var userAgent = "go-pushnotifier 0.1.0"
 
 type Client struct {
 	Http      resty.Client
 	BaseURL   string
 	UserAgent string
+	Username  string
+	Password  string
 
 	AppToken string
 }
@@ -56,11 +59,18 @@ type Device struct {
 }
 
 func NewClient() *Client {
+	r := SetupHttpClient()
+	username := os.Getenv("PUSHNOTIFIER_USERNAME")
+	password := os.Getenv("PUSHNOTIFIER_PASSWORD")
+
+	c := &Client{*r, baseURL, userAgent, username, password, ""}
+	return c
+}
+
+func SetupHttpClient() *resty.Client {
 	debug, _ := strconv.ParseBool(os.Getenv("PUSHNOTIFIER_DEBUG"))
 	pkg := os.Getenv("PUSHNOTIFIER_PACKAGE")
 	token := os.Getenv("PUSHNOTIFIER_TOKEN")
-	username := os.Getenv("PUSHNOTIFIER_USERNAME")
-	password := os.Getenv("PUSHNOTIFIER_PASSWORD")
 
 	r := resty.New()
 	r.SetError(AuthError{})
@@ -70,20 +80,17 @@ func NewClient() *Client {
 		"User-Agent": userAgent,
 	})
 
-	c := &Client{*r, baseURL, userAgent, ""}
-	c.login(username, password)
-
-	return c
+	return r
 }
 
-func (c *Client) login(username, password string) {
+func (c *Client) Login() {
 	var url strings.Builder
 	url.WriteString(c.BaseURL)
 	url.WriteString("/user/login")
 
 	var l LoginResponse
 	r, _ := c.Http.R().
-		SetBody(LoginRequest{Username: username, Password: password}).
+		SetBody(LoginRequest{Username: c.Username, Password: c.Password}).
 		SetResult(&l).
 		Post(url.String())
 

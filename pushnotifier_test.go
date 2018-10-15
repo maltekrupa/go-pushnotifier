@@ -80,6 +80,41 @@ func TestLogin(t *testing.T) {
 	st.Expect(t, gock.IsDone(), true)
 }
 
+func TestListDevices(t *testing.T) {
+	defer gock.Off()
+
+	gock.New("https://" + domain).
+		Post(apiVersion + "/user/login").
+		Reply(200).
+		JSON(LoginResponse{
+			Username:  "foo",
+			Avatar:    "bar",
+			AppToken:  "1234",
+			ExpiresAt: "5678",
+		})
+
+	device_response := make([]Device, 1)
+	device_response = append(device_response, Device{
+		Id:    "ABC",
+		Title: "example@example.org",
+		Model: "E-Mail",
+		Image: "https://devices.pushnotifier.de/virtual/E-Mail.png",
+	})
+
+	gock.New("https://" + domain).
+		Get(apiVersion + "/devices").
+		Reply(200).
+		JSON(device_response)
+
+	c := NewClientFromEnv()
+	c.Login()
+	devices, err := c.ListDevices()
+
+	st.Expect(t, err, nil)
+	st.Expect(t, devices, device_response)
+	st.Expect(t, gock.IsDone(), true)
+}
+
 // func TestClient(t *testing.T) {
 // 	defer gock.Off() // Flush pending mocks after test execution
 //

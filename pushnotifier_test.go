@@ -93,7 +93,7 @@ func TestListDevices(t *testing.T) {
 			ExpiresAt: "5678",
 		})
 
-	device_response := make([]Device, 1)
+	device_response := make([]Device, 0)
 	device_response = append(device_response, Device{
 		Id:    "ABC",
 		Title: "example@example.org",
@@ -112,16 +112,6 @@ func TestListDevices(t *testing.T) {
 
 	st.Expect(t, err, nil)
 	st.Expect(t, devices, device_response)
+	st.Expect(t, len(devices), 1)
 	st.Expect(t, gock.IsDone(), true)
 }
-
-// func TestClient(t *testing.T) {
-// 	defer gock.Off() // Flush pending mocks after test execution
-//
-// 	gock.New("http://server.com").
-// 		Get("/bar").
-// 		Reply(200).
-// 		JSON(map[string]string{"foo": "bar"})
-//
-// 	st.Expect(t, nil, '1')
-// }

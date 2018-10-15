@@ -9,7 +9,6 @@ import (
 	"gopkg.in/h2non/gock.v1"
 )
 
-var c *Client
 var pkg, token, username, password string
 var debug bool
 
@@ -29,10 +28,6 @@ func TestMain(m *testing.M) {
 	os.Setenv("PUSHNOTIFIER_PASSWORD", "password_bar")
 	password = os.Getenv("PUSHNOTIFIER_PASSWORD")
 
-	r := SetupHttpClient(token, pkg, debug)
-
-	c = &Client{*r, "https://" + domain + apiVersion, userAgent, username, password, ""}
-
 	// call flag.Parse() here if TestMain uses flags
 	os.Exit(m.Run())
 }
@@ -45,6 +40,24 @@ func TestRestyClient(t *testing.T) {
 	st.Expect(t, r.UserInfo.Username, pkg)
 	st.Expect(t, r.UserInfo.Password, token)
 	st.Expect(t, r.Header["User-Agent"][0], userAgent)
+}
+
+func TestClient(t *testing.T) {
+	c := NewClient(username, password, token, pkg, debug)
+
+	st.Expect(t, c.BaseURL, "https://"+domain+apiVersion)
+	st.Expect(t, c.UserAgent, userAgent)
+	st.Expect(t, c.Username, username)
+	st.Expect(t, c.Password, password)
+}
+
+func TestClientFromEnv(t *testing.T) {
+	c := NewClientFromEnv()
+
+	st.Expect(t, c.BaseURL, "https://"+domain+apiVersion)
+	st.Expect(t, c.UserAgent, userAgent)
+	st.Expect(t, c.Username, username)
+	st.Expect(t, c.Password, password)
 }
 
 func TestLogin(t *testing.T) {
@@ -60,6 +73,7 @@ func TestLogin(t *testing.T) {
 			"expires_at": "5678",
 		})
 
+	c := NewClientFromEnv()
 	c.Login()
 
 	st.Expect(t, c.AppToken, "1234")

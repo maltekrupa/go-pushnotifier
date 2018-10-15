@@ -115,3 +115,33 @@ func TestListDevices(t *testing.T) {
 	st.Expect(t, len(devices), 1)
 	st.Expect(t, gock.IsDone(), true)
 }
+
+func TestSendText(t *testing.T) {
+	defer gock.Off()
+
+	gock.New("https://" + domain).
+		Post(apiVersion + "/user/login").
+		Reply(200).
+		JSON(LoginResponse{
+			Username:  "foo",
+			Avatar:    "bar",
+			AppToken:  "1234",
+			ExpiresAt: "5678",
+		})
+
+	gock.New("https://" + domain).
+		Put(apiVersion + "/notifications/text").
+		Reply(200).
+		JSON(SendResponse{
+			Success: []string{"foo"},
+			Error:   []string{"bar"},
+		})
+
+	c := NewClientFromEnv()
+	c.Login()
+	resp, err := c.SendText([]string{"foo"}, "test message")
+
+	st.Expect(t, err, nil)
+	st.Expect(t, resp, SendResponse{[]string{"foo"}, []string{"bar"}})
+	st.Expect(t, gock.IsDone(), true)
+}

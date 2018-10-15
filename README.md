@@ -23,22 +23,22 @@ With the exception of `PUSHNOTIFIER_DEBUG` (which defaults to `false`) all of
 them are required!
 
 ```
-package main$
-$
-import ($
->-"fmt"$
-$
->-"github.com/temal-/go-pushnotifier"$
-)$
-$
-func main() {$
->-foo := pushnotifier.NewClientFromEnv()$
->-foo.Login()$
->-bar, _ := foo.ListDevices()$
->-fmt.Println(bar)$
->-baz, _ := foo.SendText([]string{bar[0].Id}, "test")$
->-fmt.Println(baz)$
-}$
+package main
+
+import (
+>-"fmt"
+
+>-"github.com/temal-/go-pushnotifier"
+)
+
+func main() {
+>-foo := pushnotifier.NewClientFromEnv()
+>-foo.Login()
+>-bar, _ := foo.ListDevices()
+>-fmt.Println(bar)
+>-baz, _ := foo.SendText([]string{bar[0].Id}, "test")
+>-fmt.Println(baz)
+}
 ```
 
 Alternatively you can also create a `NewClient` and supply all [needed parameters](https://github.com/temal-/go-pushnotifier/blob/master/pushnotifier.go#L61)

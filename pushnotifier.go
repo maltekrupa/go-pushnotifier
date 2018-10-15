@@ -58,8 +58,18 @@ type Device struct {
 	Image string `json:"image"`
 }
 
-func NewClient() *Client {
-	r := SetupHttpClient()
+func NewClient(username, password, token, pkg string, debug bool) *Client {
+	r := SetupHttpClient(token, pkg, debug)
+	c := &Client{*r, baseURL, userAgent, username, password, ""}
+	return c
+}
+
+func NewClientFromEnv() *Client {
+	debug, _ := strconv.ParseBool(os.Getenv("PUSHNOTIFIER_DEBUG"))
+	pkg := os.Getenv("PUSHNOTIFIER_PACKAGE")
+	token := os.Getenv("PUSHNOTIFIER_TOKEN")
+	r := SetupHttpClient(token, pkg, debug)
+
 	username := os.Getenv("PUSHNOTIFIER_USERNAME")
 	password := os.Getenv("PUSHNOTIFIER_PASSWORD")
 
@@ -67,11 +77,7 @@ func NewClient() *Client {
 	return c
 }
 
-func SetupHttpClient() *resty.Client {
-	debug, _ := strconv.ParseBool(os.Getenv("PUSHNOTIFIER_DEBUG"))
-	pkg := os.Getenv("PUSHNOTIFIER_PACKAGE")
-	token := os.Getenv("PUSHNOTIFIER_TOKEN")
-
+func SetupHttpClient(token, pkg string, debug bool) *resty.Client {
 	r := resty.New()
 	r.SetError(AuthError{})
 	r.SetDebug(debug)

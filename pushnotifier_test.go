@@ -10,22 +10,24 @@ import (
 )
 
 var c *Client
+var pkg, token, username, password string
+var debug bool
 
 func TestMain(m *testing.M) {
 	os.Setenv("PUSHNOTIFIER_DEBUG", "false")
-	debug, _ := strconv.ParseBool(os.Getenv("PUSHNOTIFIER_DEBUG"))
+	debug, _ = strconv.ParseBool(os.Getenv("PUSHNOTIFIER_DEBUG"))
 
 	os.Setenv("PUSHNOTIFIER_PACKAGE", "com.test.foo")
-	pkg := os.Getenv("PUSHNOTIFIER_PACKAGE")
+	pkg = os.Getenv("PUSHNOTIFIER_PACKAGE")
 
 	os.Setenv("PUSHNOTIFIER_TOKEN", "TOKEN1234")
-	token := os.Getenv("PUSHNOTIFIER_TOKEN")
+	token = os.Getenv("PUSHNOTIFIER_TOKEN")
 
 	os.Setenv("PUSHNOTIFIER_USERNAME", "username_foo")
-	username := os.Getenv("PUSHNOTIFIER_USERNAME")
+	username = os.Getenv("PUSHNOTIFIER_USERNAME")
 
 	os.Setenv("PUSHNOTIFIER_PASSWORD", "password_bar")
-	password := os.Getenv("PUSHNOTIFIER_PASSWORD")
+	password = os.Getenv("PUSHNOTIFIER_PASSWORD")
 
 	r := SetupHttpClient(token, pkg, debug)
 
@@ -33,6 +35,16 @@ func TestMain(m *testing.M) {
 
 	// call flag.Parse() here if TestMain uses flags
 	os.Exit(m.Run())
+}
+
+func TestRestyClient(t *testing.T) {
+	r := SetupHttpClient(token, pkg, debug)
+
+	st.Expect(t, r.Debug, debug)
+	// We send the package and token as basic auth values
+	st.Expect(t, r.UserInfo.Username, pkg)
+	st.Expect(t, r.UserInfo.Password, token)
+	st.Expect(t, r.Header["User-Agent"][0], userAgent)
 }
 
 func TestLogin(t *testing.T) {
